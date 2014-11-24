@@ -6,8 +6,12 @@
  *
  */
 
+if (typeof he !== 'object' && typeof require === 'function') {
+  var he = require('he');
+}
+
 var toMarkdown = function(string) {
-  
+
   var ELEMENTS = [
     {
       patterns: 'p',
@@ -58,7 +62,7 @@ var toMarkdown = function(string) {
     {
       patterns: 'code',
       replacement: function(str, attrs, innerHTML) {
-        return innerHTML ? '`' + innerHTML + '`' : '';
+        return innerHTML ? '`' + he.decode(innerHTML) + '`' : '';
       }
     },
     {
@@ -70,9 +74,33 @@ var toMarkdown = function(string) {
             title = attrs.match(attrRegExp('title'));
         return '![' + (alt && alt[1] ? alt[1] : '') + ']' + '(' + src[1] + (title && title[1] ? ' "' + title[1] + '"' : '') + ')';
       }
+    },
+    {
+      patterns: 'table',
+      replacement: function(str, attrs, innerHTML) {
+          var sRc = "";
+          var aRows = innerHTML.split("<tr>");
+          for(var nRow = 1; nRow < aRows.length; nRow++){
+            var aCols = aRows[nRow].split(/<t[dh]>/);
+            var nCol = 1;
+            for(; nCol < aCols.length; nCol++){
+                if(nCol > 1) sRc += "|";
+                sRc += aCols[nCol].replace(/<\/t[dh]>[.\s\S]*$/, "");
+            }
+            if(nRow == 1){
+                sRc += "\n";
+                for(var n= 0; n < nCol - 1; n++){
+                    if(n != 0) sRc += "|";
+                    sRc += "-";
+                }
+            }
+            sRc += "\n";
+          }
+        return sRc;
+      }
     }
   ];
-  
+
   for(var i = 0, len = ELEMENTS.length; i < len; i++) {
     if(typeof ELEMENTS[i].patterns === 'string') {
       string = replaceEls(string, { tag: ELEMENTS[i].patterns, replacement: ELEMENTS[i].replacement, type:  ELEMENTS[i].type });
@@ -83,7 +111,7 @@ var toMarkdown = function(string) {
       }
     }
   }
-  
+
   function replaceEls(html, elProperties) {
     var pattern = elProperties.type === 'void' ? '<' + elProperties.tag + '\\b([^>]*)\\/?>' : '<' + elProperties.tag + '\\b([^>]*)>([\\s\\S]*?)<\\/' + elProperties.tag + '>',
         regex = new RegExp(pattern, 'gi'),
@@ -98,43 +126,46 @@ var toMarkdown = function(string) {
     }
     return markdown;
   }
-  
+
   function attrRegExp(attr) {
     return new RegExp(attr + '\\s*=\\s*["\']?([^"\']*)["\']?', 'i');
   }
-  
+
   // Pre code blocks
-  
-  string = string.replace(/<pre\b[^>]*>`([\s\S]*)`<\/pre>/gi, function(str, innerHTML) {
-    innerHTML = innerHTML.replace(/^\t+/g, '  '); // convert tabs to spaces (you know it makes sense)
-    innerHTML = innerHTML.replace(/\n/g, '\n    ');
-    return '\n\n    ' + innerHTML + '\n';
+
+  string = string.replace(/<pre\b[^>]*>`([\s\S]*?)`<\/pre>/gi, function(str, innerHTML) {
+    var text = he.decode(innerHTML);
+    text = text.replace(/^\t+/g, '  '); // convert tabs to spaces (you know it makes sense)
+    text = text.replace(/\n/g, '\n    ');
+    return '\n\n    ' + text + '\n';
   });
-  
+
   // Lists
-  
+
   // Escape numbers that could trigger an ol
-  string = string.replace(/(\d+). /g, '$1\\. ');
-  
-  // Converts lists that have no child lists (of same type) first, then works it's way up
+  // If there are more than three spaces before the code, it would be in a pre tag
+  // Make sure we are escaping the period not matching any character
+  string = string.replace(/^(\s{0,3}\d+)\. /g, '$1\\. ');
+
+  // Converts lists that have no child lists (of same type) first, then works its way up
   var noChildrenRegex = /<(ul|ol)\b[^>]*>(?:(?!<ul|<ol)[\s\S])*?<\/\1>/gi;
   while(string.match(noChildrenRegex)) {
     string = string.replace(noChildrenRegex, function(str) {
       return replaceLists(str);
     });
   }
-  
+
   function replaceLists(html) {
-    
+
     html = html.replace(/<(ul|ol)\b[^>]*>([\s\S]*?)<\/\1>/gi, function(str, listType, innerHTML) {
       var lis = innerHTML.split('</li>');
       lis.splice(lis.length - 1, 1);
-      
+
       for(i = 0, len = lis.length; i < len; i++) {
         if(lis[i]) {
           var prefix = (listType === 'ol') ? (i + 1) + ".  " : "*   ";
           lis[i] = lis[i].replace(/\s*<li[^>]*>([\s\S]*)/i, function(str, innerHTML) {
-            
+
             innerHTML = innerHTML.replace(/^\s+/, '');
             innerHTML = innerHTML.replace(/\n\n/g, '\n\n    ');
             // indent nested lists
@@ -147,7 +178,7 @@ var toMarkdown = function(string) {
     });
     return '\n\n' + html.replace(/[ \t]+\n|\s+$/g, '');
   }
-  
+
   // Blockquotes
   var deepest = /<blockquote\b[^>]*>((?:(?!<blockquote)[\s\S])*?)<\/blockquote>/gi;
   while(string.match(deepest)) {
@@ -155,7 +186,7 @@ var toMarkdown = function(string) {
       return replaceBlockquotes(str);
     });
   }
-  
+
   function replaceBlockquotes(html) {
     html = html.replace(/<blockquote\b[^>]*>([\s\S]*?)<\/blockquote>/gi, function(str, inner) {
       inner = inner.replace(/^\s+|\s+$/g, '');
@@ -166,13 +197,17 @@ var toMarkdown = function(string) {
     });
     return html;
   }
-  
+
   function cleanUp(string) {
     string = string.replace(/^[\t\r\n]+|[\t\r\n]+$/g, ''); // trim leading/trailing whitespace
     string = string.replace(/\n\s+\n/g, '\n\n');
     string = string.replace(/\n{3,}/g, '\n\n'); // limit consecutive linebreaks to 2
     return string;
   }
-  
+
   return cleanUp(string);
 };
+
+if (typeof exports === 'object') {
+  exports.toMarkdown = toMarkdown;
+}

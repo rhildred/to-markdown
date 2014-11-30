@@ -323,9 +323,9 @@ exports['converting table'] = function(test) {
     "</table>"
   ].join('\n');
   var md = [
-    "Col 1|Col 2",
-    "-|-",
-    "1|2"
+    "|Col 1|Col 2|",
+    "|-|-|",
+    "|1|2|"
   ].join('\n');
   test.equal(toMarkdown(html), md, "We expect tables to be converted");
   html = [
@@ -351,11 +351,11 @@ exports['converting table'] = function(test) {
   "</table>"
   ].join('\n');
   md = [
-  "Address:|",
-  "-|-",
-  "|5-420 Erb St. West",
-  "|Suite 207",
-  "|Waterloo, ON, N2L 6K6, Canada"
+  "|Address:||",
+  "|-|-|",
+  "||5-420 Erb St. West|",
+  "||Suite 207|",
+  "||Waterloo, ON, N2L 6K6, Canada|"
   ].join('\n');
   test.equal(toMarkdown(html), md, "We expect tables with uneven rows to be converted");
   test.done();

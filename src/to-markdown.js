@@ -83,6 +83,7 @@ var toMarkdown = function(string) {
           for(var nRow = 1; nRow < aRows.length; nRow++){
             var aCols = aRows[nRow].split(/<t[dh]>/);
             var nCol = 1;
+            sRc += "|";
             for(; nCol < aCols.length; nCol++){
                 if(nCol > 1) sRc += "|";
                 sRc += aCols[nCol].replace(/<\/t[dh]>[.\s\S]*$/, "");
@@ -92,13 +93,13 @@ var toMarkdown = function(string) {
                 nCol = 3;
             }
             if(nRow == 1){
-                sRc += "\n";
+                sRc += "|\n|";
                 for(var n= 0; n < nCol - 1; n++){
                     if(n != 0) sRc += "|";
                     sRc += "-";
                 }
             }
-            sRc += "\n";
+            sRc += "|\n";
           }
         return sRc;
       }

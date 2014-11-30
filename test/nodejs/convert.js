@@ -328,5 +328,35 @@ exports['converting table'] = function(test) {
     "1|2"
   ].join('\n');
   test.equal(toMarkdown(html), md, "We expect tables to be converted");
+  html = [
+  "<table>",
+  "<thead>",
+  "<tr>",
+  "<th>Address:</th>",
+  "</tr>",
+  "</thead>",
+  "<tbody>",
+  "<tr>",
+  "<td></td>",
+  "<td>5-420 Erb St. West</td>",
+  "</tr>",
+  "<tr>",
+  "<td></td>",
+  "<td>Suite 207</td>",
+  "</tr>",
+  "<tr>",
+  "<td></td>",
+  "<td>Waterloo, ON, N2L 6K6, Canada</td>",
+  "</tr>",
+  "</table>"
+  ].join('\n');
+  md = [
+  "Address:|",
+  "-|-",
+  "|5-420 Erb St. West",
+  "|Suite 207",
+  "|Waterloo, ON, N2L 6K6, Canada"
+  ].join('\n');
+  test.equal(toMarkdown(html), md, "We expect tables with uneven rows to be converted");
   test.done();
 };
